@@ -130,5 +130,13 @@ public class Main {
                     return "";
                 }
         );
+
+        Spark.get(
+                "/images",
+                (request, response) -> {
+                    JsonSerializer s = new JsonSerializer();
+                    return s.serialize(selectImages(conn));
+                }
+        );
     }
 }
