@@ -4,10 +4,7 @@ import jodd.json.JsonSerializer;
 import spark.Session;
 import spark.Spark;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 public class Main {
 
@@ -18,17 +15,32 @@ public class Main {
         stmt.execute("CREATE TABLE IF NOT EXISTS recipients (id IDENTITY, user_id INT, image_id INT)");
     }
 
-    public static void insertUser
+    public static void insertUser(Connection conn, String name) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement("INSERT INTO users VALUES (NULL, ?)");
+        stmt.setString(1, name);
+        stmt.execute();
+    }
+
+    public static User selectUser(Connection conn, String name) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users WHERE name = ?");
+        stmt.setString(1, name);
+        ResultSet results = stmt.executeQuery();
+        if (results.next()) {
+            int id = results.getInt("id");
+            return new User(id, name);
+        }
+        return null;
+    }
 
     public static void main(String[] args) throws SQLException {
-        Connection conn = DriverManager.getConnection("jdbc:h2./main");
+        Connection conn = DriverManager.getConnection("jdbc:h2:./main");
         createTables(conn);
 
         Spark.externalStaticFileLocation("public");
         Spark.init();
 
         Spark.post(
-                "/loging",
+                "/login",
                 (request, response) -> {
                     String name = request.queryParams("username");
                     User user = selectUser(conn, name);
@@ -58,8 +70,12 @@ public class Main {
 
         Spark.post(
                 "/logout",
-
+                (request, response) -> {
+                    Session session = request.session();
+                    session.invalidate();
+                    response.redirect("/");
+                    return null;
+                }
         );
-
     }
 }
