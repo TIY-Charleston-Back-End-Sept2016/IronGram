@@ -1,10 +1,16 @@
 package com.theironyard;
 
+import com.sun.tools.doclets.internal.toolkit.util.DocFinder;
 import jodd.json.JsonSerializer;
 import spark.Session;
 import spark.Spark;
 
+import javax.servlet.MultipartConfigElement;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.sql.*;
+import java.util.ArrayList;
 
 public class Main {
 
@@ -52,6 +58,39 @@ public class Main {
                     return null;
                 }
         );
+
+        Spark.post(
+                "/upload",
+                (request,response) -> {
+                    request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/temp"));
+                    try (InputStream is = request.raw().getPart("image").getInputStream()) {
+                        File dir = new File("public/images");
+                        dir.mkdirs();
+                        File f = File.createTempFile("image",request.raw().getPart("image").getSubmittedFileName(),dir);
+                        FileOutputStream fos = new FileOutputStream(f);
+                        if (is.available() > 1024 * 1024 * 20) {
+                            return null;
+                        }
+                        byte[] buffer = new byte[is.available()];
+                        is.read(buffer);
+                        fos.write(buffer);
+
+                        Session session = request.session();
+                        User user = selectUser(conn,session.attribute("username"));
+                        insertImage(conn,f.getName(),user.id);
+                    }
+                    response.redirect("/");
+                    return null;
+                }
+        );
+
+        Spark.get(
+                "/images",
+                (request,response) -> {
+                    JsonSerializer serializer = new JsonSerializer();
+                    return serializer.serialize(selectImages(conn));
+                }
+        );
     }
     static void createTables(Connection conn) throws SQLException {
         Statement stmt = conn.createStatement();
@@ -75,5 +114,26 @@ public class Main {
             return new User(id,name);
         }
         return null;
+    }
+
+    public static void insertImage (Connection conn, String filename, int userId) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement("INSERT INTO images VALUES (null,?,?)");
+        stmt.setString(1,filename);
+        stmt.setInt(2,userId);
+        stmt.execute();
+    }
+
+    static ArrayList<Image> selectImages(Connection conn) throws SQLException {
+        ArrayList<Image> images = new ArrayList<>();
+        PreparedStatement stmt = conn.prepareStatement("SELECT * FROM images INNER JOIN users ON images.user_id = users.id");
+        ResultSet results = stmt.executeQuery();
+        while (results.next()) {
+            int id = results.getInt("images.id");
+            String filename = results.getString("images.filename");
+            String author = results.getString("users.name");
+            Image image = new Image(id,filename,author);
+            images.add(image);
+        }
+        return images;
     }
 }
