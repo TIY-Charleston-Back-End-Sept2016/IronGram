@@ -4,6 +4,7 @@ $.get(
         if(data.length > 0){
             $("#loginForm").hide();
             $("#logoutForm").show();
+            $("#uploadForm").show();
         }
     }
 )
