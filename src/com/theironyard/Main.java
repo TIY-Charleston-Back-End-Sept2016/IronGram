@@ -1,8 +1,11 @@
 package com.theironyard;
 
+import spark.Spark;
+
 public class Main {
 
     public static void main(String[] args) {
-	// goodness darn it
+        Spark.externalStaticFileLocation("public");
+        Spark.init();
     }
 }
