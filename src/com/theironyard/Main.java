@@ -37,16 +37,26 @@ public class Main {
         return null;
     }
 
-    static void insertImage(Connection conn, String filename, int userId) throws SQLException {
-        PreparedStatement stmt = conn.prepareStatement("INSERT INTO images VALUES (NULL, ?, ?)");
+    static int insertImage(Connection conn, String filename, int userId) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement("INSERT INTO images VALUES (NULL, ?, ?)", Statement.RETURN_GENERATED_KEYS);
         stmt.setString(1, filename);
         stmt.setInt(2, userId);
         stmt.execute();
+
+        ResultSet rs = stmt.getGeneratedKeys();
+        if(rs.next()) {
+            return rs.getInt(1);
+        }
+        return 0;
     }
 
-    static ArrayList<Image> selectImages(Connection conn) throws SQLException {
+    static ArrayList<Image> selectImages(Connection conn,int userId) throws SQLException {
         ArrayList<Image> images = new ArrayList<>();
-        PreparedStatement stmt = conn.prepareStatement("SELECT * FROM images INNER JOIN users ON images.user_id = users.id");
+        PreparedStatement stmt = conn.prepareStatement("SELECT * FROM images INNER JOIN" +
+                " users ON images.user_id = users.id INNER JOIN recipients ON images.id = recipients.image_id " +
+                "WHERE recipients.user_id = ? OR images.user_id = ?");
+        stmt.setInt(1,userId);
+        stmt.setInt(2,userId);
         ResultSet results = stmt.executeQuery();
         while (results.next()) {
             int id = results.getInt("images.id");
@@ -56,6 +66,13 @@ public class Main {
             images.add(img);
         }
         return images;
+    }
+
+    public static void insertRecipient(Connection conn,int userId,int imageId) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement("INSERT INTO recipients VALUES (NULL,?,?)");
+        stmt.setInt(1,userId);
+        stmt.setInt(2,imageId);
+        stmt.execute();
     }
 
     public static void main(String[] args) throws SQLException {
@@ -122,7 +139,15 @@ public class Main {
 
                         Session session = request.session();
                         User user = selectUser(conn, session.attribute("username"));
-                        insertImage(conn, f.getName(), user.id);
+                        int imageId = insertImage(conn, f.getName(), user.id);
+                        String recipients = request.queryParams("recipients");
+                        String[] recArray = recipients.split(",");
+                        for (String rec : recArray) {
+                            User recUser = selectUser(conn,rec);
+                            if (recUser != null) {
+                                insertRecipient(conn,recUser.id,imageId);
+                            }
+                        }
                     }
                     response.redirect("/");
                     return null;
@@ -132,8 +157,14 @@ public class Main {
         Spark.get(
                 "/images",
                 (request, response) -> {
+                    Session session = request.session();
+                    String name = session.attribute("username");
+                    User user = selectUser(conn,name);
+                    if (user == null) {
+                        return "[]";
+                    }
                     JsonSerializer serializer = new JsonSerializer();
-                    return serializer.serialize(selectImages(conn));
+                    return serializer.serialize(selectImages(conn,user.id));
                 }
         );
     }
