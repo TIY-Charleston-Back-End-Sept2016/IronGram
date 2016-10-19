@@ -14,9 +14,9 @@ $.get(
     function(data) {
         var images = JSON.parse(data);
         for (var i in images) {
-            var elem = $("<image>");
-            elem.attr("src","images/" + images[i].filename);
-            $("images").append(elem);
+            var elem = $("<img>");
+            elem.attr("src", "images/" + images[i].filename);
+            $("#images").append(elem);
         }
     }
-)
+);
