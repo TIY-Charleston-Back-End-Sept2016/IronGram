@@ -37,11 +37,17 @@ public class Main {
         return null;
     }
 
-    static void insertImage(Connection conn, String filename, int userId) throws SQLException {
-        PreparedStatement stmt = conn.prepareStatement("INSERT INTO images VALUES (NULL, ?, ?)");
+    static int insertImage(Connection conn, String filename, int userId) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement("INSERT INTO images VALUES (NULL, ?, ?)", Statement.RETURN_GENERATED_KEYS);
         stmt.setString(1, filename);
         stmt.setInt(2, userId);
         stmt.execute();
+
+        ResultSet rs = stmt.getGeneratedKeys();
+        if (rs.next()) {
+            return rs.getInt(1);
+        }
+        return 0;
     }
 
     static ArrayList<Image> selectImages(Connection conn) throws SQLException {
@@ -56,6 +62,9 @@ public class Main {
             images.add(img);
         }
         return images;
+    }
+    static void insertRecipient(Connection conn, int userId, int imageId) throws SQLException{
+        PreparedStatement stmt = conn.prepareStatement("INSERT INTO recipients VALUES)
     }
 
     public static void main(String[] args) throws SQLException {
@@ -123,6 +132,7 @@ public class Main {
                         Session session = request.session();
                         User user = selectUser(conn, session.attribute("username"));
                         insertImage(conn, f.getName(), user.id);
+                        int imageId = insertImage(conn, f.getName(), )
                     }
                     response.redirect("/");
                     return null;
@@ -135,7 +145,6 @@ public class Main {
                     JsonSerializer serializer = new JsonSerializer();
                     return serializer.serialize(selectImages(conn));
                 }
-                // test comment
         );
     }
 }
