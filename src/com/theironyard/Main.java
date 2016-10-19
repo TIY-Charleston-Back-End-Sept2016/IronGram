@@ -15,11 +15,10 @@ public class Main {
 
     static void createTables(Connection conn) throws SQLException {
         Statement stmt = conn.createStatement();
-        stmt.execute("CREATE TABLE IF NOT EXISTS users(id IDENTITY, name VARCHAR)");
-        stmt.execute("CREATE TABLE IF NOT EXISTS images(id IDENTITY, filename VARCHAR, user_id INT)");
+        stmt.execute("CREATE TABLE IF NOT EXISTS users (id IDENTITY, name VARCHAR)");
+        stmt.execute("CREATE TABLE IF NOT EXISTS images (id IDENTITY, filename VARCHAR, user_id INT)");
         stmt.execute("CREATE TABLE IF NOT EXISTS recipients (id IDENTITY, user_id INT, image_id INT)");
     }
-
 
     public static void insertUser(Connection conn, String name) throws SQLException {
         PreparedStatement stmt = conn.prepareStatement("INSERT INTO users VALUES (NULL, ?)");
@@ -27,7 +26,7 @@ public class Main {
         stmt.execute();
     }
 
-    public static User selectUser (Connection conn, String name) throws SQLException {
+    public static User selectUser(Connection conn, String name) throws SQLException {
         PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users WHERE name = ?");
         stmt.setString(1, name);
         ResultSet results = stmt.executeQuery();
@@ -38,21 +37,21 @@ public class Main {
         return null;
     }
 
-    static void insertImage (Connection conn, String filename, int userId) throws SQLException {
+    static void insertImage(Connection conn, String filename, int userId) throws SQLException {
         PreparedStatement stmt = conn.prepareStatement("INSERT INTO images VALUES (NULL, ?, ?)");
         stmt.setString(1, filename);
         stmt.setInt(2, userId);
         stmt.execute();
     }
 
-    static ArrayList<Image> selectImages (Connection conn) throws SQLException {
+    static ArrayList<Image> selectImages(Connection conn) throws SQLException {
         ArrayList<Image> images = new ArrayList<>();
         PreparedStatement stmt = conn.prepareStatement("SELECT * FROM images INNER JOIN users ON images.user_id = users.id");
         ResultSet results = stmt.executeQuery();
-        while (results.next()){
+        while (results.next()) {
             int id = results.getInt("images.id");
             String filename = results.getString("images.filename");
-            String author = results.getNString("users.name");
+            String author = results.getString("users.name");
             Image img = new Image(id, filename, author);
             images.add(img);
         }
@@ -65,7 +64,6 @@ public class Main {
 
         Spark.externalStaticFileLocation("public");
         Spark.init();
-
 
         Spark.post(
                 "/login",
@@ -91,8 +89,8 @@ public class Main {
                         return "";
                     }
                     User user = selectUser(conn, name);
-                    JsonSerializer s = new JsonSerializer();
-                    return s.serialize(user);
+                    JsonSerializer serializer = new JsonSerializer();
+                    return serializer.serialize(user);
                 }
         );
 
@@ -115,8 +113,8 @@ public class Main {
                         dir.mkdirs();
                         File f = File.createTempFile("image", request.raw().getPart("image").getSubmittedFileName(), dir);
                         FileOutputStream fos = new FileOutputStream(f);
-                        if (is.available() > 1024 * 1024 * 20){
-                            throw new Exception("That image is to large - please try again.");
+                        if (is.available() > 1024 * 1024 * 20) {
+                            return null;
                         }
                         byte[] buffer = new byte[is.available()];
                         is.read(buffer);
@@ -127,15 +125,15 @@ public class Main {
                         insertImage(conn, f.getName(), user.id);
                     }
                     response.redirect("/");
-                    return "";
+                    return null;
                 }
         );
 
         Spark.get(
                 "/images",
                 (request, response) -> {
-                    JsonSerializer s = new JsonSerializer();
-                    return s.serialize(selectImages(conn));
+                    JsonSerializer serializer = new JsonSerializer();
+                    return serializer.serialize(selectImages(conn));
                 }
         );
     }

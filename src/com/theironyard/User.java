@@ -1,7 +1,7 @@
 package com.theironyard;
 
 /**
- * Created by rdw1995 on 10/18/16.
+ * Created by zach on 10/18/16.
  */
 public class User {
     int id;
