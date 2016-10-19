@@ -1,15 +1,12 @@
 package com.theironyard;
 
 /**
- * Created by michaelplott on 10/18/16.
+ * Created by zach on 10/18/16.
  */
 public class Image {
     int id;
     String filename;
     String author;
-
-    public Image() {
-    }
 
     public Image(int id, String filename, String author) {
         this.id = id;
